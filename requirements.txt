@@ -1,0 +1,6 @@
+black                     # formatting
+pandas[excel]>=2.3.3             # data processing
+python-calamine>=0.5.3    # speedy excel reading via rust
+pytest>=8.4.2
+ruff>= 0.14.0             # fast linting
+xlsxwriter>=3.2.9         # nice excel formatting

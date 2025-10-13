@@ -1,0 +1,23 @@
+[project]
+name = "conference-run-sheets"
+version = "0.1.0"
+requires-python = ">=3.12"
+description = "A utility for generating PyBay Conference Run Sheets from Sessionize Conference dowloads."
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "PyBay Conference Chair", email = "chair@pybay.org"},
+    {name = "PyBay Conference Chair", email = "chris@surfaceowl.com"},
+]
+keywords = ["Run Sheet", "Speaker", "Room Captain"]
+
+# The project uses only the standard library - no external deps
+dependencies = [
+    "pandas>=2.3.3",
+    "python-calamine>=0.5.3",
+    "xlsxwriter>=3.2.9"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/pybay/conference-run-sheets.git
+"Source" = "https://github.com/pybay/conference-run-sheets.git"
