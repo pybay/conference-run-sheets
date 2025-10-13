@@ -2,7 +2,7 @@
 
 ## `Schedule` Excel File<br>
 (e.g. `pybay2025 schedulelist - exported 2025-10-12.xlsx`)<br>
-NOTE: each item listed below is found in it's own column:<br>
+NOTE: each item listed below is found in its own column:<br>
 Day<br>
 Time<br>
 Room<br>

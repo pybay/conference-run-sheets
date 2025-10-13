@@ -9,14 +9,14 @@ This Python utility provides a straightforward way to read conference schedule a
 
 Sessionize contains all the details needed to run the conference, but is not available to all event staff and does not provide an easy way to create concise "Run Sheets" that give a concise timeline view of the talks and speakers for the conference.
 
-**Built for the PyBay conference:** Given a PyBay event staff who has access to both Sessionize and the PyBay Google Drive for the event year, this utility allows the person to read in two spreadsheets from Sessionize, and then create the run sheets in a local excel file that can be uploaded to the PyBay Google Drive for sharing, printing and distribution to the team.
+**Built for the PyBay conference:** Given a PyBay event staff who has access to both Sessionize and the PyBay Google Drive for the event year, this utility allows the person to read in two spreadsheets from Sessionize, and then create the run sheets in a local Excel file that can be uploaded to the PyBay Google Drive for sharing, printing and distribution to the team.
 
 ### Key Features:
 * **Generate Speaker Intro Notes:** Specifically includes select speaker intro notes as available in Sessionize: e.g. timeslot, talk title, pronunciation of speaker name, preferred intro bullets, etc.
 * **Save Organizer Time:** Reduces manual workload of processing and formatting spreadsheets.
 * **Reads Excel downloads:**  Reads the `Schedule` and  `Flattened Accepted Sessions` Excel files as input, after they have been manually downloaded from Sessionize.
 * **Automates Data Engineering:** Processes existing Sessionize data into multiple user-friendly formats, appropriate for the AV Team, Room Captain/Moderators - including summary and detail views.
-* **LLM free:** Uses only Python, and common supporting libraries like Pandas, XLSXwriter, etc. for free, deterministic, low stress processing.  Google Sheets retains much Excel formatting when uploaded. 
+* **LLM free:** Uses only Python, and common supporting libraries like Pandas, xlsxwriter, etc. for free, deterministic, low stress processing.  Google Sheets retains much Excel formatting when uploaded. 
 
 ### How It Works:<br>
 ```text
