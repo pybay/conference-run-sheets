@@ -19,5 +19,5 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/pybay/conference-run-sheets.git
+"Homepage" = "https://github.com/pybay/conference-run-sheets.git"
 "Source" = "https://github.com/pybay/conference-run-sheets.git"

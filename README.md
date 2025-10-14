@@ -132,3 +132,23 @@ python -m main.py
 ```
 ### 7. Upload the generated Excel file to Google Sheets - to share with the team per diagram above.
 
+---
+
+## FAQ
+
+### How do I disable the security warning when clicking photo links in Excel?
+
+When you click on speaker photo URLs in the generated Excel sheets, you may see a "Microsoft Office Security Notice" warning. This is standard Excel behavior for external hyperlinks and protects against malicious links.
+
+**To disable warnings for sessionize.com links:**
+
+1. Open Excel and go to **File → Options**
+2. Select **Trust Center** (left sidebar)
+3. Click **Trust Center Settings** button
+4. Go to **Trusted Locations** (left sidebar)
+5. Click **Add new location**
+6. Enter the path to your downloaded Excel file, OR
+7. Alternatively, go to **Protected View** and uncheck "Enable Protected View for files from the Internet"
+
+**Note:** After clicking "Yes" on the first security warning, Excel will remember your choice for `sessionize.com` URLs for the current session, so subsequent photo links won't trigger warnings.
+

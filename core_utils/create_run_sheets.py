@@ -55,7 +55,7 @@ COLUMN_ORDER_DETAIL_ORIGINAL = [
 COLUMN_RENAME_MAP = {
     "Owner": "Speaker",
     "What will attendees learn?": "Attendees Learn",
-    "Mobile # with Country Code (not shared publicly)": "Mobile # (NOT PUBLIC)",
+    "Mobile # with Country Code (not shared publicly)": "MOBILE # - PRIVATE!",
     "This would be my first Conference Talk": "First Conf Talk",
     "Profile Picture": "Profile Photo",
     "Scheduled Duration": "Duration",
@@ -72,7 +72,7 @@ COLUMN_ORDER_DETAIL = [
     "Speaker",
     "First name - pronunciation",
     "Last name - pronunciation",
-    "Mobile # (NOT PUBLIC)",
+    "MOBILE # - PRIVATE!",
     "Pronouns",
     "First Conf Talk",
     "Profile Photo",
@@ -145,13 +145,16 @@ class RunSheetCollection:
         # Data Cleanup
         df_core = df_core.rename(columns=COLUMN_RENAME_MAP)
 
-        df_core["Mobile # (NOT PUBLIC)"] = df_core["Mobile # (NOT PUBLIC)"].apply(format_phone_number)
+        df_core["MOBILE # - PRIVATE!"] = df_core["MOBILE # - PRIVATE!"].apply(format_phone_number)
         df_core["Pronouns"] = df_core["Pronouns"].str.title()
 
         # Replace "Not Provided" with 7pm (using a dummy date since datetime needs both date and time)
         df_core.loc[df_core["Scheduled At"] == "Not Provided", "Scheduled At"] = "2025-10-18 19:00:00"
         df_core["Scheduled At"] = pd.to_datetime(df_core["Scheduled At"])
         df_core["Time"] = df_core["Scheduled At"].dt.strftime("%I:%M %p")  # time only, more readable in run sheets
+
+        # Extract conference year from scheduled dates (most common year in the data)
+        conference_year = int(df_core["Scheduled At"].dt.year.mode()[0])
         df_core["Session format"] = df_core["Session format"].astype(str).str[:2]
         # alternate speakers don't have assigned/scheduled rooms - update to "Alternate" so they can go to any room
         df_core.loc[df_core["Room"] == "Not Provided", "Room"] = "Alternate Speaker - ANY room"
@@ -184,6 +187,7 @@ class RunSheetCollection:
         ][COLUMN_ORDER_DETAIL]
 
         return {
+            "conference_year": conference_year,
             "df_core_sorted": df_core_sorted,
             "robertson_summary": df_robertson_summary,
             "robertson_detail": df_robertson_detail,

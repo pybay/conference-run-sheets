@@ -26,11 +26,12 @@ class RunSheetSaveManager(ABC):
     def __init__(self, results: dict[str, DataFrame], sessionize_output_path: Path):
         """
         Args:
-            results: Dict of DataFrames with sheet data
+            results: Dict of DataFrames with sheet data (must include 'conference_year' key)
             sessionize_output_path: Path (Excel) or Sheet ID/name (Google Sheets)
         """
         self.results = results
         self.sessionize_output_path = sessionize_output_path
+        self.conference_year = results.get('conference_year', 'YYYY')  # Extract year for headers
         self.sheet_keys = self._validate_sheet_keys()
         self.COLUMN_ORDER_DETAIL = COLUMN_ORDER_DETAIL
         self.COLUMN_ORDER_SUMMARY = COLUMN_ORDER_SUMMARY
@@ -64,6 +65,10 @@ class RunSheetSaveManager(ABC):
         valid_keys = []
 
         for key in self.results.keys():
+            # Skip metadata keys
+            if key == 'conference_year':
+                continue
+
             # Check if key starts with any exclude pattern
             if any(key.startswith(pattern) for pattern in self.EXCLUDE_SHEET_PATTERNS):
                 continue  # Skip this key
