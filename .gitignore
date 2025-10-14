@@ -218,3 +218,16 @@ __marimo__/
 
 # ignore extra Microsoft file that is visible with Excel fiels copies to Linux from Windows systems
 *Zone.Identifier
+
+# Image cache directory - contains downloaded speaker profile photos
+images_cache/
+
+# Image files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.webp
+*.svg
+*.ico

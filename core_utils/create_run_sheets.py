@@ -1,11 +1,11 @@
 """
 utility to organize the data and create the run sheets in an Excel file
 """
-from dataclasses import dataclass
-import pandas as pd
 from pathlib import Path
+import re
 from typing import Any
 
+import pandas as pd
 from pandas import DataFrame
 
 from core_utils.get_input import get_input_from_sessionize
@@ -34,7 +34,7 @@ ALL_EXPECTED_COLUMN_SUBSET = [
 
 COLUMNS_DETAIL = ALL_EXPECTED_COLUMN_SUBSET
 COLUMN_ORDER_SUMMARY = ["Room", "Time", "Title", "Speaker"]
-COLUMN_ORDER_DETAIL = [
+COLUMN_ORDER_DETAIL_ORIGINAL = [
     "Room",
     "Time",
     "Title",
@@ -52,6 +52,58 @@ COLUMN_ORDER_DETAIL = [
     "Speaker introduction - bullet 3"
 ]
 
+COLUMN_RENAME_MAP = {
+    "Owner": "Speaker",
+    "What will attendees learn?": "Attendees Learn",
+    "Mobile # with Country Code (not shared publicly)": "Mobile # (NOT PUBLIC)",
+    "This would be my first Conference Talk": "First Conf Talk",
+    "Profile Picture": "Profile Photo",
+    "Scheduled Duration": "Duration",
+    "Speaker introduction - bullet 1": "Speaker intro #1",
+    "Speaker introduction - bullet 2": "Speaker intro #2",
+    "Speaker introduction - bullet 3": "Speaker intro #3",
+}
+
+COLUMN_ORDER_DETAIL = [
+    "Room",
+    "Time",
+    "Duration",
+    "Title",
+    "Speaker",
+    "First name - pronunciation",
+    "Last name - pronunciation",
+    "Mobile # (NOT PUBLIC)",
+    "Pronouns",
+    "First Conf Talk",
+    "Profile Photo",
+    "Attendees Learn",
+    "Speaker intro #1",
+    "Speaker intro #2",
+    "Speaker intro #3"
+]
+
+
+def format_phone_number(phone):
+    """Format phone number to XXX.XXX.XXXX"""
+    # Handle empty/invalid values
+    if pd.isna(phone) or phone == "Not Provided":
+        result = "Not Provided"
+    else:
+        # Remove all non-numeric characters
+        digits = re.sub(r'\D', '', str(phone))
+
+        # Strip leading country code for US ONLY if present (end user readability)
+        if digits.startswith('1') and len(digits) == 11:
+            digits = digits[1:]
+
+        # Format based on digit count (end user readability)
+        match len(digits):
+            case 10:
+                result = f"{digits[:3]}.{digits[3:6]}.{digits[6:]}"
+            case _:
+                result = digits or "Not Provided"
+
+    return result
 
 class RunSheetCollection:
     """Container for organized run sheet DataFrames."""
@@ -61,6 +113,7 @@ class RunSheetCollection:
         self.df_core: DataFrame = get_input_from_sessionize(sessionize_input_path)
 
         results = self.organize_data()
+        # IMPORTANT!  `_summary` and `_detail` are critical keywords for df and sheet names
         self.df_core_sorted = results.get('df_core_sorted')
         self.robertson_summary = results['robertson_summary']
         self.robertson_detail = results['robertson_detail']
@@ -90,20 +143,22 @@ class RunSheetCollection:
         )
 
         # Data Cleanup
+        df_core = df_core.rename(columns=COLUMN_RENAME_MAP)
+
+        df_core["Mobile # (NOT PUBLIC)"] = df_core["Mobile # (NOT PUBLIC)"].apply(format_phone_number)
+        df_core["Pronouns"] = df_core["Pronouns"].str.title()
+
         # Replace "Not Provided" with 7pm (using a dummy date since datetime needs both date and time)
         df_core.loc[df_core["Scheduled At"] == "Not Provided", "Scheduled At"] = "2025-10-18 19:00:00"
         df_core["Scheduled At"] = pd.to_datetime(df_core["Scheduled At"])
         df_core["Time"] = df_core["Scheduled At"].dt.strftime("%I:%M %p")  # time only, more readable in run sheets
-        df_core["Speaker"] = df_core["Owner"]
-        df_core = df_core.drop(["Owner", "Scheduled At"], axis=1)
         df_core["Session format"] = df_core["Session format"].astype(str).str[:2]
         # alternate speakers don't have assigned/scheduled rooms - update to "Alternate" so they can go to any room
         df_core.loc[df_core["Room"] == "Not Provided", "Room"] = "Alternate Speaker - ANY room"
-
-        fallback_duration_mask = df_core["Scheduled Duration"] == "Not Provided"
-        df_core.loc[fallback_duration_mask, "Scheduled Duration"] = df_core.loc[
+        fallback_duration_mask = df_core["Duration"] == "Not Provided"
+        df_core.loc[fallback_duration_mask, "Duration"] = df_core.loc[
             fallback_duration_mask, "Session format"]
-        df_core["Scheduled Duration"] = df_core["Scheduled Duration"].astype(int)
+        df_core["Duration"] = df_core["Duration"].astype(int)
 
         df_core = df_core[COLUMN_ORDER_DETAIL]  # helpfully order columns AFTER adding usefully named 'TIME' column
 
@@ -117,11 +172,11 @@ class RunSheetCollection:
         df_robertson_detail = df_core_sorted[
             df_core_sorted["Room"].str.contains("Robertson")
         ][COLUMN_ORDER_DETAIL]
-
-        df_fisher_summary = df_core_sorted[df_core_sorted["Room"].str.contains("Fisher")][COLUMN_ORDER_SUMMARY]
         df_fisher_detail = df_core_sorted[
             df_core_sorted["Room"].str.contains("Fisher")
         ][COLUMN_ORDER_DETAIL]
+
+        df_fisher_summary = df_core_sorted[df_core_sorted["Room"].str.contains("Fisher")][COLUMN_ORDER_SUMMARY]
 
         df_workshop_summary = df_core_sorted[df_core_sorted["Room"].str.contains("Workshop")][COLUMN_ORDER_SUMMARY]
         df_workshop_detail = df_core_sorted[

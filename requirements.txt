@@ -1,6 +1,8 @@
 black                     # formatting
-pandas[excel]>=2.3.3             # data processing
+pandas[excel]>=2.3.3      # core data processing
+pip                       # always grab latest version
 python-calamine>=0.5.3    # speedy excel reading via rust
 pytest>=8.4.2
+requests>=2.32.5          # for grabbing profile photos
 ruff>= 0.14.0             # fast linting
 xlsxwriter>=3.2.9         # nice excel formatting
