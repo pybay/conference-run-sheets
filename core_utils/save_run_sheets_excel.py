@@ -6,7 +6,7 @@ from pathlib import Path
 from pandas import DataFrame
 
 from core_utils.save_run_sheet_manager import RunSheetSaveManager
-from core_utils.pybay_standard_theme import PYBAY_PRIMARY_BLUE, PYBAY_SECONDARY_YELLOW
+from core_utils.pybay_standard_theme import PYBAY_PRIMARY_BLUE, PYBAY_SECONDARY_YELLOW, TAB_COLOR_PALETTE
 
 
 class ExcelRunSheetWriter(RunSheetSaveManager):
@@ -21,6 +21,10 @@ class ExcelRunSheetWriter(RunSheetSaveManager):
         self.sessionize_output_path = sessionize_output_path
         self.workbook = None
         self.formats = {}
+        # Build room color mapping - assign colors sequentially to unique rooms
+        unique_rooms = sorted(set(key.split('_')[0] for key in self.sheet_keys))
+        self.room_colors = {room: TAB_COLOR_PALETTE[i % len(TAB_COLOR_PALETTE)]
+                            for i, room in enumerate(unique_rooms)}
 
     def _setup(self):
         """Initialize Excel workbook and formats."""
@@ -79,6 +83,13 @@ class ExcelRunSheetWriter(RunSheetSaveManager):
             'underline': True
         })
 
+        self.formats['url_visible_right'] = self.workbook.add_format({
+            'valign': 'top',
+            'align': 'right',
+            'font_color': 'blue',
+            'underline': True
+        })
+
         self.formats['cell_bold'] = self.workbook.add_format({
             'bold': True,
             'valign': 'top'
@@ -87,20 +98,234 @@ class ExcelRunSheetWriter(RunSheetSaveManager):
     def _write_sheet(self, df: DataFrame, sheet_name: str, sheet_type: str):
         """Write sheet based on type (summary or detail)."""
         if sheet_name:
+            # Get tab color for this room from pre-built mapping
+            room_name = sheet_name.split('_')[0]  # Extract room (fisher, robertson, workshop)
+            tab_color = self.room_colors.get(room_name, TAB_COLOR_PALETTE[0])
+
             if sheet_type == 'summary':
                 try:
                     worksheet = self.workbook.add_worksheet(sheet_name)
+                    worksheet.set_tab_color(f'#{tab_color}')
                     self._write_summary_sheet(df, worksheet, sheet_name)
                 except ValueError as e:
                     raise RuntimeError(f"Worksheet '{sheet_name}' not found.") from e
             elif sheet_type == 'detail':
-                # Create detail print version with card layout
+                # Create mobile version (for phone viewing)
+                try:
+                    mobile_sheet_name = f"{sheet_name}_mobile"
+                    worksheet_mobile = self.workbook.add_worksheet(mobile_sheet_name)
+                    worksheet_mobile.set_tab_color(f'#{tab_color}')
+                    self._write_detail_sheet_mobile(df, worksheet_mobile, mobile_sheet_name)
+                except ValueError as e:
+                    raise RuntimeError(f"Worksheet '{mobile_sheet_name}' creation failed.") from e
+
+                # Create print version (for clipboard/printing)
                 try:
                     print_sheet_name = f"{sheet_name}_print"
-                    worksheet = self.workbook.add_worksheet(print_sheet_name)
-                    self._write_detail_sheet_print(df, worksheet, print_sheet_name)
+                    worksheet_print = self.workbook.add_worksheet(print_sheet_name)
+                    worksheet_print.set_tab_color(f'#{tab_color}')
+                    self._write_detail_sheet_print(df, worksheet_print, print_sheet_name)
                 except ValueError as e:
-                    raise RuntimeError(f"Worksheet '{sheet_name}_print' not found.") from e
+                    raise RuntimeError(f"Worksheet '{print_sheet_name}' creation failed.") from e
+
+    def _write_detail_sheet_mobile(self, df: DataFrame, worksheet, sheet_name: str):
+        """
+        Write detail sheet with vertical layout optimized for mobile viewing.
+
+        Simple 2-column layout: Label | Data
+        Designed to fit iPhone 15 Pro portrait mode with no horizontal scrolling.
+
+        Column Width Calculation Rationale:
+        - iPhone 15 Pro screen width: 393 CSS points (portrait mode)
+        - Excel row number gutter: ~30-40 points
+        - Available content width: 393 - 40 = 353 points
+        - Excel column width units: 1 unit ≈ 7 points at default zoom
+        - Maximum usable units: 353 / 7 ≈ 50 units
+
+        Actual column allocation:
+        - Column A (Labels): 18 units × 7 = 126 points
+        - Column B (Data):   30 units × 7 = 210 points
+        - Total content:     48 units × 7 = 336 points
+        - With row numbers:  336 + 40 = 376 points (17pt buffer, fits comfortably)
+
+        This ensures Room Captains can view all information on their phone
+        without horizontal scrolling while maintaining readability.
+        """
+        import pandas as pd
+
+        # Set default row height for all rows
+        worksheet.set_default_row(15.0)
+
+        # Mobile-optimized 2-column layout (fits iPhone 15 Pro portrait: 393pt screen)
+        # Row numbers take ~30-40pt, leaving ~350pt for content
+        # Excel units: 350pt / 7pt per unit ≈ 50 units max
+        worksheet.set_column(0, 0, 18)  # Column A: Labels (18 units ≈ 126pt)
+        worksheet.set_column(1, 1, 30)  # Column B: Data (30 units ≈ 210pt)
+        # Total: 48 units ≈ 336pt (fits comfortably within 350pt available)
+
+        # Create column index mapping from DataFrame
+        col_idx = {col: idx for idx, col in enumerate(self.COLUMN_ORDER_DETAIL)}
+
+        current_row = 0
+
+        for record_idx, row_values in enumerate(df.values):
+            # === Room NAME as header (only for first record - will be frozen/repeated) ===
+            if record_idx == 0:
+                room_name = row_values[col_idx['Room']] or 'Room'
+                # Merge both columns, use primary blue background
+                worksheet.merge_range(current_row, 0, current_row, 1, room_name, self.formats['header'])
+                worksheet.set_row(current_row, 20)
+                current_row += 1
+
+            # === Time and Duration (in separate cells with yellow background) ===
+            time_val = row_values[col_idx['Time']] or ''
+            duration_val = row_values[col_idx['Duration']] or ''
+            # Create yellow background formats matching print tabs
+            time_yellow = self.workbook.add_format({
+                'bold': True,
+                'align': 'center',
+                'valign': 'top',
+                'bg_color': f'#{PYBAY_SECONDARY_YELLOW}'
+            })
+            duration_yellow = self.workbook.add_format({
+                'bold': True,
+                'align': 'center',
+                'valign': 'top',
+                'bg_color': f'#{PYBAY_SECONDARY_YELLOW}'
+            })
+            worksheet.write(current_row, 0, time_val, time_yellow)
+            worksheet.write(current_row, 1, duration_val, duration_yellow)
+            current_row += 1
+
+            # === Title (merged both columns) ===
+            worksheet.merge_range(current_row, 0, current_row, 1,
+                                 row_values[col_idx['Title']] or '', self.formats['title'])
+            worksheet.set_row(current_row, 30)
+            current_row += 1
+
+            # === Speaker name (merged both columns) ===
+            worksheet.merge_range(current_row, 0, current_row, 1,
+                                 row_values[col_idx['Speaker']] or '', self.formats['cell_bold'])
+            current_row += 1
+
+            # === Photo URL (clickable link, right-justified in column B) ===
+            profile_photo = row_values[col_idx['Profile Photo']]
+            worksheet.write(current_row, 0, '', self.formats['cell_normal'])
+            if profile_photo and not pd.isna(profile_photo) and str(profile_photo) != 'Not Provided':
+                worksheet.write_url(current_row, 1, str(profile_photo), self.formats['url_visible_right'], string='Photo_URL')
+            else:
+                worksheet.write(current_row, 1, '', self.formats['cell_normal'])
+            current_row += 1
+
+            # TODO: Add image insertion when implemented
+            # Blank row for spacing where image will go
+            worksheet.write(current_row, 0, '', self.formats['cell_normal'])
+            worksheet.write(current_row, 1, '', self.formats['cell_normal'])
+            worksheet.set_row(current_row, 80)  # Tall row for future image
+            current_row += 1
+
+            # === pronunciation section (merged both columns) ===
+            worksheet.merge_range(current_row, 0, current_row, 1, 'pronunciation', self.formats['cell_bold'])
+            current_row += 1
+
+            # First name
+            worksheet.write(current_row, 0, 'First name:', self.formats['label'])
+            worksheet.write(current_row, 1, row_values[col_idx['First name - pronunciation']] or '', self.formats['cell_normal'])
+            current_row += 1
+
+            # Last name
+            worksheet.write(current_row, 0, 'Last name:', self.formats['label'])
+            worksheet.write(current_row, 1, row_values[col_idx['Last name - pronunciation']] or '', self.formats['cell_normal'])
+            current_row += 1
+
+            # Blank row
+            worksheet.write(current_row, 0, '', self.formats['cell_normal'])
+            worksheet.write(current_row, 1, '', self.formats['cell_normal'])
+            current_row += 1
+
+            # Pronouns
+            worksheet.write(current_row, 0, 'Pronouns:', self.formats['label'])
+            worksheet.write(current_row, 1, row_values[col_idx['Pronouns']] or '', self.formats['cell_normal'])
+            current_row += 1
+
+            # First Conf Talk
+            worksheet.write(current_row, 0, 'First Conf Talk:', self.formats['label'])
+            worksheet.write(current_row, 1, row_values[col_idx['First Conf Talk']] or '', self.formats['cell_normal'])
+            current_row += 1
+
+            # Mobile # - PRIVATE!
+            worksheet.write(current_row, 0, 'Mobile # PRIVATE!', self.formats['label'])
+            worksheet.write(current_row, 1, row_values[col_idx['MOBILE # - PRIVATE!']] or '', self.formats['cell_normal'])
+            current_row += 1
+
+            # Blank row
+            worksheet.write(current_row, 0, '', self.formats['cell_normal'])
+            worksheet.write(current_row, 1, '', self.formats['cell_normal'])
+            current_row += 1
+
+            # === Attendees Learn (full width) ===
+            worksheet.write(current_row, 0, 'Attendees Learn:', self.formats['cell_bold'])
+            worksheet.write(current_row, 1, '', self.formats['cell_normal'])
+            current_row += 1
+
+            attendees_learn = row_values[col_idx['Attendees Learn']] or ''
+            display_value = '' if pd.isna(attendees_learn) else str(attendees_learn)
+            # Merge both columns for content
+            worksheet.merge_range(current_row, 0, current_row, 1, display_value, self.formats['cell_wrap'])
+            row_height = 15.0 if len(display_value) < 50 else 30 if len(display_value) < 100 else 50
+            worksheet.set_row(current_row, row_height)
+            current_row += 1
+
+            # Blank row
+            worksheet.write(current_row, 0, '', self.formats['cell_normal'])
+            worksheet.write(current_row, 1, '', self.formats['cell_normal'])
+            current_row += 1
+
+            # === Speaker Bullets ===
+            worksheet.write(current_row, 0, 'Speaker Bullets:', self.formats['cell_bold'])
+            worksheet.write(current_row, 1, '', self.formats['cell_normal'])
+            current_row += 1
+
+            # Speaker intro bullets (merged for easier reading)
+            for bullet_num in ['#1', '#2', '#3']:
+                content = row_values[col_idx[f'Speaker intro {bullet_num}']] or ''
+                display_value = '' if pd.isna(content) else str(content)
+                worksheet.merge_range(current_row, 0, current_row, 1, display_value, self.formats['cell_wrap'])
+                row_height = 15.0 if len(display_value) < 50 else 30 if len(display_value) < 100 else 50
+                worksheet.set_row(current_row, row_height)
+                current_row += 1
+
+            # === Blank separator rows between records (more space for vertical layout) ===
+            # First separator row
+            worksheet.write(current_row, 0, '', self.formats['cell_normal'])
+            worksheet.write(current_row, 1, '', self.formats['cell_normal'])
+            worksheet.set_row(current_row, 20.0)
+            current_row += 1
+
+            # Second separator row for extra spacing
+            worksheet.write(current_row, 0, '', self.formats['cell_normal'])
+            worksheet.write(current_row, 1, '', self.formats['cell_normal'])
+            worksheet.set_row(current_row, 20.0)
+            current_row += 1
+
+        # === Worksheet formatting (consistent order) ===
+        # 1. Row sizing (first row with room name set to 20 in loop above)
+
+        # 2. Screen display settings
+        worksheet.freeze_panes(1, 0)  # Freeze first row (room name)
+
+        # 3. Page setup - optimized for mobile/vertical scrolling
+        worksheet.set_portrait()
+        worksheet.set_paper(1)  # Letter size (8.5 x 11")
+        worksheet.set_margins(left=0.25, right=0.25, top=0.75, bottom=0.75)
+
+        # 4. Print layout
+        worksheet.fit_to_pages(1, 0)  # Fit to 1 page wide, unlimited pages tall
+
+        # 5. Repeating elements
+        worksheet.repeat_rows(0)  # Repeat row 1 (room name) on every printed page
+        worksheet.set_header(f'&C&BPyBay {self.conference_year}')  # Centered header with year
+        worksheet.set_footer(f'&L&B{sheet_name}&R&Bpage &P of &N')
 
     def _write_summary_sheet(self, df: DataFrame, worksheet, sheet_name: str):
         """Write and format summary sheet."""

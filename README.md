@@ -128,7 +128,7 @@ It produces one output Excel file named `pybay_YYYY-run_sheets.YYYY.MM.DD.xlsx` 
 
 ```
 source ./venv/bin/activate
-python -m main.py
+python main.py
 ```
 ### 7. Upload the generated Excel file to Google Sheets - to share with the team per diagram above.
 

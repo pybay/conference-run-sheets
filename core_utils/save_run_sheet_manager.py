@@ -78,6 +78,8 @@ class RunSheetSaveManager(ABC):
             else:
                 print(f"Warning: Ignoring unexpected key '{key}'")
 
+        # Sort by room name, then by type (summary → detail)
+        # This groups all tabs for each room together: fisher_summary, fisher_detail, robertson_summary, etc.
         return sorted(valid_keys, key=lambda x: (x.split('_')[0], 'detail' in x))
 
     def create_sheets(self):
@@ -86,7 +88,8 @@ class RunSheetSaveManager(ABC):
 
         for sheet_key in self.sheet_keys:
             df = self.results[sheet_key]
-            sheet_name = sheet_key
+            # Remove '_detail' suffix from sheet names for cleaner tab names
+            sheet_name = sheet_key.replace('_detail', '')
             sheet_type = self._get_sheet_type(sheet_key)
 
             self._write_sheet(df, sheet_name, sheet_type)
