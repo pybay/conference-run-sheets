@@ -77,7 +77,7 @@ class ExcelRunSheetWriter(RunSheetSaveManager):
             if sheet_type == 'summary':
                 self._write_summary_sheet(df, worksheet)
             elif sheet_type == 'detail':
-                self._write_detail_sheet(df, worksheet)
+                self._write_detail_sheet_print(df, worksheet)
 
     def _write_summary_sheet(self, df: DataFrame, worksheet):
         """Write and format summary sheet."""
@@ -104,7 +104,7 @@ class ExcelRunSheetWriter(RunSheetSaveManager):
         worksheet.freeze_panes(1, 0)
         worksheet.set_row(0, 30)
 
-    def _write_detail_sheet(self, df: DataFrame, worksheet):
+    def _write_detail_sheet_print(self, df: DataFrame, worksheet):
         """Write and format detail sheet with images."""
         import pandas as pd
 

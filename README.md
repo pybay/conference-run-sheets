@@ -14,7 +14,7 @@ Sessionize contains all the details needed to run the conference, but is not ava
 ### Key Features:
 * **Generate Speaker Intro Notes:** Specifically includes select speaker intro notes as available in Sessionize: e.g. timeslot, talk title, pronunciation of speaker name, preferred intro bullets, etc.
 * **Save Organizer Time:** Reduces manual workload of processing and formatting spreadsheets.
-* **Reads Excel downloads:**  Reads the `Schedule` and  `Flattened Accepted Sessions` Excel files as input, after they have been manually downloaded from Sessionize.
+* **Reads Excel downloads:**  Reads the `Flattened Accepted Sessions` Excel file as input, after they have been manually downloaded from Sessionize.
 * **Automates Data Engineering:** Processes existing Sessionize data into multiple user-friendly formats, appropriate for the AV Team, Room Captain/Moderators - including summary and detail views.
 * **LLM free:** Uses only Python, and common supporting libraries like Pandas, xlsxwriter, etc. for free, deterministic, low stress processing.  Google Sheets retains much Excel formatting when uploaded. 
 
@@ -27,7 +27,6 @@ Sessionize contains all the details needed to run the conference, but is not ava
  1. Install This Repo ----------------------------------------> [ This Python Repo ]
  
  2. Login to Sessionize -------> Download Core Files:
-                                    • Schedule.xlsx
                                     • *Flattened_Accepted_Sessions.xlsx
                                                     |
                                                     |
@@ -100,9 +99,7 @@ python3 -m pip install -r requirements.txt
 ### 3. Download Required Input Files
 
 Assumes you are using Sessionize for the conference management of speakers and talks.  <br>
-Download both:
-- the `Schedule` Excel File (e.g. `pybay2025 schedulelist - exported 2025-10-12.xlsx`)
-- the `Flattened Accepted Sessions` Excel file, which has all info on one tab, and easier to process (e.g. `pybay2025 flattened accepted sessions - exported 2025-10-13.xlsx`)
+Download the `Flattened Accepted Sessions` Excel file, which has all info on one tab, and easier to process (e.g. `pybay2025 flattened accepted sessions - exported 2025-10-13.xlsx`)
 
 
 ### 4. Review the Fields Actually Available in each Excel File
