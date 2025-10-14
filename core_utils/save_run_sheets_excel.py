@@ -208,20 +208,35 @@ class ExcelRunSheetWriter(RunSheetSaveManager):
                                  row_values[col_idx['Speaker']] or '', self.formats['cell_bold'])
             current_row += 1
 
-            # === Photo URL (clickable link, right-justified in column B) ===
+            # === Photo URL (clickable link, left-justified in column B) ===
             profile_photo = row_values[col_idx['Profile Photo']]
             worksheet.write(current_row, 0, '', self.formats['cell_normal'])
             if profile_photo and not pd.isna(profile_photo) and str(profile_photo) != 'Not Provided':
-                worksheet.write_url(current_row, 1, str(profile_photo), self.formats['url_visible_right'], string='Photo_URL')
+                worksheet.write_url(current_row, 1, str(profile_photo), self.formats['url_visible'], string='Photo_URL')
             else:
                 worksheet.write(current_row, 1, '', self.formats['cell_normal'])
             current_row += 1
 
-            # TODO: Add image insertion when implemented
-            # Blank row for spacing where image will go
-            worksheet.write(current_row, 0, '', self.formats['cell_normal'])
-            worksheet.write(current_row, 1, '', self.formats['cell_normal'])
-            worksheet.set_row(current_row, 80)  # Tall row for future image
+            # === Image insertion area (single tall row: 149pt = 46+46+57) ===
+            from core_utils.image_helper import insert_image_to_worksheet
+
+            if profile_photo and not pd.isna(profile_photo) and str(profile_photo) != 'Not Provided':
+                # Insert image in column B (normalized to 144x144 = 1.5 inches)
+                insert_image_to_worksheet(
+                    worksheet, current_row, 1, str(profile_photo),
+                    self.formats['cell_normal'],
+                    target_size=(144, 144)
+                )
+                # Write empty cells for image area
+                worksheet.write(current_row, 0, '', self.formats['cell_normal'])
+                worksheet.write(current_row, 1, '', self.formats['cell_normal'])
+            else:
+                # No image, just write empty cells
+                worksheet.write(current_row, 0, '', self.formats['cell_normal'])
+                worksheet.write(current_row, 1, '', self.formats['cell_normal'])
+
+            # Set single tall row for image (150pt to contain 144px image)
+            worksheet.set_row(current_row, 150)
             current_row += 1
 
             # === pronunciation section (merged both columns) ===
@@ -493,11 +508,12 @@ class ExcelRunSheetWriter(RunSheetSaveManager):
                 current_row, ZONES['header_title'][1],
                 row_values[col_idx['Title']] or '', title_format
             )
-            # Speaker (bold, yellow bg)
+            # Speaker (bold, yellow bg, wrap text)
             speaker_format = self.workbook.add_format({
                 'bold': True,
                 'valign': 'top',
-                'bg_color': f'#{PYBAY_SECONDARY_YELLOW}'
+                'bg_color': f'#{PYBAY_SECONDARY_YELLOW}',
+                'text_wrap': True
             })
             worksheet.merge_range(
                 current_row, ZONES['header_speaker'][0],
@@ -520,19 +536,22 @@ class ExcelRunSheetWriter(RunSheetSaveManager):
                 current_row, 9,
                 '', self.formats['cell_normal']
             )
-            # Column J empty
-            worksheet.write(current_row, 10, '', self.formats['cell_normal'])
-            # Column K - Photo URL link
+            # Columns K-L merged - Photo URL link (left-justified)
             profile_photo = row_values[col_idx['Profile Photo']]
             if profile_photo and not pd.isna(profile_photo) and str(profile_photo) != 'Not Provided':
-                worksheet.write_url(
+                worksheet.merge_range(
+                    current_row, 10,  # Column K
                     current_row, 11,  # Column L
+                    '', self.formats['cell_normal']
+                )
+                worksheet.write_url(
+                    current_row, 10,  # Write to merged K-L, starting at K
                     str(profile_photo),
-                    self.formats['url_visible'],
+                    self.formats['url_visible'],  # Left-aligned by default
                     string='Photo URL'
                 )
             else:
-                worksheet.write(current_row, 11, '', self.formats['cell_normal'])
+                worksheet.merge_range(current_row, 10, current_row, 11, '', self.formats['cell_normal'])
             worksheet.set_row(current_row, 15.0)
             current_row += 1
 
@@ -549,9 +568,32 @@ class ExcelRunSheetWriter(RunSheetSaveManager):
 
             photo_start_row = current_row  # Remember where photo area starts
 
+            # FIRST: Merge the entire photo area (K-L) for all 6 detail field rows
+            # Calculate end row (6 fields including 1 blank = 6 rows)
+            photo_end_row = current_row + 5  # 0-indexed: current + 5 = 6 rows total
+            worksheet.merge_range(
+                photo_start_row, ZONES['photo'][0],
+                photo_end_row, ZONES['photo'][1],
+                '', self.formats['cell_normal']
+            )
+
+            # SECOND: Insert image into the merged area (top-right corner)
+            profile_photo_url = row_values[col_idx['Profile Photo']]
+            if profile_photo_url and not pd.isna(profile_photo_url) and str(profile_photo_url) != 'Not Provided':
+                from core_utils.image_helper import insert_image_to_worksheet
+                insert_image_to_worksheet(
+                    worksheet,
+                    photo_start_row,
+                    ZONES['photo'][0],
+                    str(profile_photo_url),
+                    self.formats['cell_normal'],
+                    target_size=(144, 144)  # Normalized to 144x144 = 1.5 inches @ 96 DPI
+                )
+
+            # THIRD: Write detail fields (labels and data only - photo area already handled)
             for field in detail_fields:
                 if field is None:
-                    # Insert blank row with same merge pattern as data rows
+                    # Insert blank row - only label and data areas (photo already merged above)
                     # Label area (A-C)
                     worksheet.merge_range(
                         current_row, 0,
@@ -564,10 +606,8 @@ class ExcelRunSheetWriter(RunSheetSaveManager):
                         current_row, 9,
                         '', self.formats['cell_normal']
                     )
-                    # Photo area (J-L) - write empty cells (will be covered by photo merge later)
-                    for col in range(10, 12):
-                        worksheet.write(current_row, col, '', self.formats['cell_normal'])
-                    worksheet.set_row(current_row, 15.0)
+                    # Photo area (K-L) already merged, don't write
+                    worksheet.set_row(current_row, 22.0)
                     current_row += 1
                 else:
                     label_text, data_field = field
@@ -583,19 +623,9 @@ class ExcelRunSheetWriter(RunSheetSaveManager):
                         current_row, 9,
                         row_values[col_idx[data_field]] or '', self.formats['cell_normal']
                     )
-                    worksheet.set_row(current_row, 15.0)  # Explicitly set row height
+                    # Photo area (K-L) already merged, don't write
+                    worksheet.set_row(current_row, 22.0)
                     current_row += 1
-
-            # === Profile Photo area (spans detail field rows, right side) ===
-            # Restore original merged cell for future image insertion
-            photo_end_row = current_row - 1
-            worksheet.merge_range(
-                photo_start_row, ZONES['photo'][0],
-                photo_end_row, ZONES['photo'][1],
-                '', self.formats['cell_normal']  # Empty merged cell placeholder for future image
-            )
-            # TODO: When image downloading is implemented, insert image here using:
-            #       worksheet.insert_image(photo_start_row, ZONES['photo'][0], image_path, {...})
 
             # === Add blank separator row between detail fields and long text sections ===
             # Use same merge pattern as data rows
@@ -688,37 +718,6 @@ class ExcelRunSheetWriter(RunSheetSaveManager):
         worksheet.set_header(f'&C&BPyBay {self.conference_year}')  # Centered header with year
         worksheet.set_footer(f'&L&B{sheet_name}&R&Bpage &P of &N')
 
-    # Note: _insert_image_excel method removed - will be reimplemented when async image download is added
-
-    def _insert_image_excel(self, worksheet, row: int, col: int, url: str):
-        """Download and insert image into Excel cell."""
-        import requests
-        from io import BytesIO
-
-        try:
-            print(f"Downloading image for row {row}...")
-            response = requests.get(url, timeout=5)  # Reduced timeout from 10 to 5
-            response.raise_for_status()
-            image_data = BytesIO(response.content)
-
-            worksheet.insert_image(
-                row, col, url,
-                {
-                    'image_data': image_data,
-                    'x_scale': 0.5,
-                    'y_scale': 0.5,
-                    'x_offset': 5,
-                    'y_offset': 5,
-                    'positioning': 1
-                }
-            )
-            print(f"✓ Image inserted for row {row}")
-        except requests.exceptions.Timeout:
-            print(f"⚠ Timeout downloading image for row {row}, skipping...")
-            worksheet.write(row, col, "Image timeout", self.formats['cell_normal'])
-        except Exception as e:
-            print(f"⚠ Failed to insert image for row {row}: {e}")
-            worksheet.write(row, col, url, self.formats['cell_normal'])
 
     def _finalize(self):
         """Close workbook."""

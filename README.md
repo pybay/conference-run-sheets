@@ -152,3 +152,27 @@ When you click on speaker photo URLs in the generated Excel sheets, you may see 
 
 **Note:** After clicking "Yes" on the first security warning, Excel will remember your choice for `sessionize.com` URLs for the current session, so subsequent photo links won't trigger warnings.
 
+---
+
+## Implementation Status
+
+### Completed Features
+
+- [x] Data processing and cleanup from Sessionize exports
+- [x] Multi-sheet Excel workbook generation
+- [x] Summary view sheets (quick timeline reference)
+- [x] Mobile-optimized detail sheets (iPhone 15 Pro portrait layout)
+- [x] Print-optimized detail sheets (8.5x11 portrait layout)
+- [x] PyBay 2025 branding (colors, fonts, conference year auto-detection)
+- [x] Speaker profile photos - concurrent downloading + caching
+- [x] Photo normalization with Pillow (consistent DPI/sizing)
+- [x] Frozen headers for on-screen scrolling
+- [x] Column width optimization for mobile viewing
+- [x] Text wrapping for long titles and content
+
+
+### Future Enhancements
+
+- [ ] Google Sheets writer design + implementation (direct upload to Google Drive)
+- [ ] Sessionize API integration (eliminate manual file download step)
+- [ ] Speaker info response quality (e.g. any speakers with missing intro info?)

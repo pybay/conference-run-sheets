@@ -84,6 +84,9 @@ class RunSheetSaveManager(ABC):
 
     def create_sheets(self):
         """Main entry point - creates all sheets with appropriate formatting."""
+        # Pre-fetch all speaker photos before creating sheets
+        self._prefetch_images()
+
         self._setup()
 
         for sheet_key in self.sheet_keys:
@@ -95,3 +98,24 @@ class RunSheetSaveManager(ABC):
             self._write_sheet(df, sheet_name, sheet_type)
 
         self._finalize()
+
+    def _prefetch_images(self):
+        """Pre-download all speaker photos and create both mobile and print sizes."""
+        from core_utils.image_helper import batch_download_and_resize_images
+        import pandas as pd
+
+        # Collect all unique photo URLs from detail sheets
+        photo_urls = set()
+        for key, df in self.results.items():
+            if key == 'conference_year':
+                continue
+            if isinstance(df, pd.DataFrame) and 'Profile Photo' in df.columns:
+                urls = df['Profile Photo'].dropna().unique()
+                photo_urls.update(str(url) for url in urls if str(url) != 'Not Provided')
+
+        if photo_urls:
+            # Download once and normalize to single size for both mobile and print
+            batch_download_and_resize_images(
+                list(photo_urls),
+                target_sizes=[(144, 144)]  # 1.5 inches @ 96 DPI = 144 pixels
+            )

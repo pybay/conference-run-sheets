@@ -1,5 +1,6 @@
 black                     # formatting
 pandas[excel]>=2.3.3      # core data processing
+Pillow>=11.0.0            # fix image sizes from Sessionize
 pip                       # always grab latest version
 python-calamine>=0.5.3    # speedy excel reading via rust
 pytest>=8.4.2
