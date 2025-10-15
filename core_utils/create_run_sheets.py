@@ -145,6 +145,16 @@ class RunSheetCollection:
         # Data Cleanup
         df_core = df_core.rename(columns=COLUMN_RENAME_MAP)
 
+        # Clean up line endings in text fields (remove Excel's _x000D_ encoding for \r and \r\n)
+        text_columns = ['Attendees Learn', 'Speaker intro #1', 'Speaker intro #2', 'Speaker intro #3']
+        for col in text_columns:
+            if col in df_core.columns:
+                # Remove literal _x000D_ string and actual carriage returns
+                df_core[col] = df_core[col].str.replace('_x000D_\n', '\n', regex=False)  # _x000D_ before newline
+                df_core[col] = df_core[col].str.replace('_x000D_', '', regex=False)  # Any remaining _x000D_
+                df_core[col] = df_core[col].str.replace('\r\n', '\n', regex=False)  # Windows line endings
+                df_core[col] = df_core[col].str.replace('\r', '', regex=False)  # Standalone carriage returns
+
         df_core["MOBILE # - PRIVATE!"] = df_core["MOBILE # - PRIVATE!"].apply(format_phone_number)
         df_core["Pronouns"] = df_core["Pronouns"].str.title()
 

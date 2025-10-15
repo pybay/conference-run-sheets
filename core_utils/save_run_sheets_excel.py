@@ -287,7 +287,11 @@ class ExcelRunSheetWriter(RunSheetSaveManager):
             display_value = '' if pd.isna(attendees_learn) else str(attendees_learn)
             # Merge both columns for content
             worksheet.merge_range(current_row, 0, current_row, 1, display_value, self.formats['cell_wrap'])
-            row_height = 15.0 if len(display_value) < 50 else 30 if len(display_value) < 100 else 50
+            # Calculate row height based on content length and newlines
+            # Rough estimate: 48 chars per line in merged mobile columns, 15pt per line
+            num_newlines = display_value.count('\n')
+            estimated_lines = max(1, (len(display_value) // 48) + num_newlines + 1)
+            row_height = max(15.0, estimated_lines * 15)
             worksheet.set_row(current_row, row_height)
             current_row += 1
 
@@ -306,7 +310,10 @@ class ExcelRunSheetWriter(RunSheetSaveManager):
                 content = row_values[col_idx[f'Speaker intro {bullet_num}']] or ''
                 display_value = '' if pd.isna(content) else str(content)
                 worksheet.merge_range(current_row, 0, current_row, 1, display_value, self.formats['cell_wrap'])
-                row_height = 15.0 if len(display_value) < 50 else 30 if len(display_value) < 100 else 50
+                # Calculate row height based on content length and newlines
+                num_newlines = display_value.count('\n')
+                estimated_lines = max(1, (len(display_value) // 48) + num_newlines + 1)
+                row_height = max(15.0, estimated_lines * 15)
                 worksheet.set_row(current_row, row_height)
                 current_row += 1
 
@@ -688,8 +695,11 @@ class ExcelRunSheetWriter(RunSheetSaveManager):
                         display_value, self.formats['cell_wrap']
                     )
 
-                    # Set row height based on content length - minimum 15.0
-                    row_height = 15.0 if len(display_value) < 50 else 30 if len(display_value) < 100 else 50
+                    # Calculate row height based on content length and newlines
+                    # Print layout: wider columns (~80 chars per line), 15pt per line
+                    num_newlines = display_value.count('\n')
+                    estimated_lines = max(1, (len(display_value) // 80) + num_newlines + 1)
+                    row_height = max(15.0, estimated_lines * 15)
                     worksheet.set_row(current_row, row_height)
                     current_row += 1
 
